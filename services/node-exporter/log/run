@@ -1,0 +1,3 @@
+#!/bin/zsh
+mkdir -p $HOME/var/log/multilog/node-exporter
+exec multilog $HOME/var/log/multilog/node-exporter

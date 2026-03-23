@@ -1,0 +1,7 @@
+#!/bin/zsh
+
+# Validate config file before starting starting service.
+# Output goes to stderr by default.
+loki --verify-config --config.file loki.yaml
+
+exec loki --config.expand-env=true --config.file loki.yaml 2>&1

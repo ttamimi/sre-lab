@@ -1,0 +1,11 @@
+#!/bin/zsh
+set -euo pipefail
+
+# Validate config file before starting starting service.
+# Redirect output to stderr so that it isn't captured by multilog.
+promtool check config prometheus.yaml >&2
+
+exec prometheus \
+  --config.file prometheus.yaml \
+  --web.listen-address=0.0.0.0:9090 \
+  --storage.tsdb.path $HOME/var/lib/prometheus 2>&1

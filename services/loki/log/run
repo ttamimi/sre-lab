@@ -1,0 +1,5 @@
+#!/bin/zsh
+set -euo pipefail
+
+mkdir -p $HOME/var/log/multilog/loki
+exec multilog $HOME/var/log/multilog/loki

@@ -1,0 +1,4 @@
+#!/bin/zsh
+cp -f grafana.ini $HOME/opt/grafana/conf/sre-lab.ini
+cd $HOME/opt/grafana
+exec bin/grafana server --config conf/sre-lab.ini

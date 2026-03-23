@@ -1,0 +1,10 @@
+#!/bin/zsh
+set -euo pipefail
+
+mkdir -p $HOME/var/run/vector
+
+# Validate config file before starting starting service (without checking if
+# sinks are up). Output goes to stderr by default.
+vector validate vector.yaml --skip-healthchecks
+
+exec vector --graceful-shutdown-limit-secs 5 -c vector.yaml 2>/dev/null

@@ -1,0 +1,91 @@
+data_dir: ${HOME}/var/run/vector # Used by the file source to persist checkpoint positions.
+sources:
+  daemontools_logs:
+    type: file
+    include:
+    - ${HOME}/var/log/multilog/*/current
+    fingerprint:
+      strategy: checksum
+      # Default lines = 1. We will run multiple instances of some components,
+      # and their first log lines might very well turn out to be identical,
+      # even with millisecond precision timestamps.
+      lines: 10
+    read_from: beginning
+  grafana_logs:
+    type: file
+    include:
+    - ${HOME}/var/log/grafana/grafana.log
+    fingerprint:
+      strategy: checksum
+    read_from: beginning
+  internal_logs:
+    type: internal_logs
+  internal_metrics:
+    type: internal_metrics
+transforms:
+  process_daemontools_logs:
+    type: remap
+    inputs:
+    - daemontools_logs
+    source: |
+      .source_type = "file"
+
+      # Extract service name from log file path
+      path = string!(.file)
+      .service_name = parse_regex(path, r'/var/log/multilog/(?P<service>[^/]*?)/current$').service ?? "missing"
+
+      # Try prasing JSON then logfmt
+      if (parsed, err = parse_json(.message); err == null && is_object(parsed)) {
+        .log = object!(parsed)
+      }  else if (parsed, err = parse_key_value(.message, accept_standalone_key: false); err == null) {
+        .log = parsed
+      } else {
+        .raw_log = .message
+      }
+      del(.message)
+  process_grafana_logs:
+    type: remap
+    inputs:
+    - grafana_logs
+    source: |
+      .source_type = "file"
+      .service_name = "grafana"
+
+      # Try prasing JSON then logfmt (with more compact syntax using type coersion operator `??`)
+      . |= { "log": object(parse_json!(.message)) } ??
+           { "log": parse_key_value(.message, accept_standalone_key: false) } ??
+           { "raw_log": .message }
+      del(.message)
+  process_internal_logs:
+    type: remap
+    inputs:
+    - internal_logs
+    source: |
+      # Internal logs are already objects. No parsing needed. We just relocate them under the log field.
+      . = { "log": . }
+      .source_type = "internal_logs"
+      .service_name = "vector"
+sinks:
+  loki:
+    inputs:
+    - process_daemontools_logs
+    - process_grafana_logs
+    - process_internal_logs
+    type: loki
+    endpoint: http://localhost:3100
+    encoding:
+      codec: json
+    labels:
+      service_name: "{{ service_name }}"
+      source_type: "{{ source_type }}"
+    out_of_order_action: accept
+    path: /loki/api/v1/push
+    remove_timestamp: true
+    buffer:
+    - type: disk
+      max_size: 1073741824 # 1GiB
+      when_full: block
+  prometheus_exporter:
+    type: prometheus_exporter
+    inputs: [internal_metrics]
+    address: 0.0.0.0:9598

@@ -1,0 +1,3 @@
+#!/bin/zsh
+mkdir -p $HOME/var/log/multilog/prometheus
+exec multilog $HOME/var/log/multilog/prometheus
