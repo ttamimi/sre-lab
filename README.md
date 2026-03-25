@@ -23,8 +23,8 @@ brew install daemontools
 ```
 
 You also need to install all of the lab components. While some of them are available on Homebrew, we generally prefer to
-install this part of the lab directly. There are some shell scripts in the [install-scripts](./install-scripts) directory
-to download and install each component.[^1]
+install this part of the lab directly. There are some shell scripts in the [`./install-scripts`](./install-scripts)
+directory to download and install each component.[^1]
 
 [^1]: If you decide to run this lab on Linux then be aware that some minor tweaks may be needed to the install scripts
 to account for the slight differences between the BSD-derived CLI tools on macOS and their GNU equivalents on Linux.
@@ -51,13 +51,13 @@ any of this. The protection that prevents the program from running is just an ex
 (`com.apple.quarantine`):
 
 ```bash
-xattr <executable-file>
+xattr <file>
 ```
 
 You can easily remove it with the `-d` option:
 
 ```bash
-xattr -d com.apple.quarantine <executable-file>
+xattr -d com.apple.quarantine <file>
 ```
 
 > [!CAUTION]
@@ -81,7 +81,7 @@ svscan services
 
 ## Design philosophy
 
-Unlike other lab environments (e.g. the [OpenTelemtry demo](https://opentelemetry.io/ecosystem/demo/)), we do not use
+Unlike other lab environments (e.g. the [OpenTelemetry demo](https://opentelemetry.io/ecosystem/demo/)), we do not use
 Docker containers, Docker Compose, or Kubernetes tools like Kind or Minikube. While containers make things more
 portable, they also add complexity. The purpose of this lab is learning. Therefore, one of its objectives is to strip
 away unnecessary complexity, reduce cognitive load, and focus on the technologies at hand. Hence the choice of
@@ -102,17 +102,17 @@ interface (`lo0` on my mac). It can be done on macOS with, for example, `ifconfi
 ### What files are you putting on my computer and where?
 
 Besides the suggested installation locations at `$HOME/bin` and `$HOME/opt` mentioned earlier, all the components are
-configured such that the only path on your disk that will be affected is `$HOME/var`. We've laid out its contents to
-match the traditional UNIX convention for directories under `/var`. We've chosen to put everything under your our
-directory because: (1) we will be running everything as our own user, and (2) it makes life easier by avoiding the need
-to `sudo`.
+configured such that the only affected path on your disk is `$HOME/var`. We've laid out its contents to match the
+traditional UNIX convention for directories under `/var`. We've chosen to put everything under the home directory
+because: (1) we will be running everything as our own user, and (2) it makes life easier by avoiding the need to
+`sudo`.
 
 Affected directories:
 
 - `$HOME/var/lib/` - data files for persistent services, e.g. Prometheus's TSDB, Grafana's SQLite database.
 - `$HOME/var/run/` - ephemeral runtime data such as PID files, lock files, seek positions within log files, etc.
 - `$HOME/var/log/` - logs.
-- `$HOME/var/log/multilog/` - logs captured by daemontool from the standard output of managed services.
+- `$HOME/var/log/multilog/` - logs captured by daemontool from standard output of managed services.
 - `$HOME/bin/` - installation location for single binaries and/or symlinks.
 - `$HOME/opt/` - installation location for larger packages.
 
@@ -120,13 +120,13 @@ Affected directories:
 
 If you take a look at the [`./services`](./services) directory, you will find that it is quite simple. daemontools
 expects a sub-directory for each service it will manage. Each of these needs to have an executable file named `run`.
-When you start `svscan`, it runs a supervised tree where the daemontools `supervise` binary is launched per service
-directory, which in turn runs the service's `run` script.[^3]
+When you start `svscan`, it runs a supervised tree where daemontools `supervise` is launched per service directory,
+which in turn runs the service's `run` script.[^3]
 
 [^3]: You'll notice that the final line in each `run` script uses `exec`. This is important and fundamental to how UNIX
 process supervisors work. daemontools' `supervise` can only manage its direct child process, not grandchildren. When
 this lab expands to include more technologies, it will be important to make sure we disable any daemonisation options
-on any software that supports it. An examples is to launch Redis with `redis-server --daemonize no`. Another example is
+on any software that supports it. An example is to launch Redis with `redis-server --daemonize no`. Another example is
 to start PostgreSQL with the `postgres` binary and not with `pg_ctl`. Yet another is the `daemon off` setting in
 NGINX's config file.
 
@@ -172,8 +172,8 @@ Three of these are persistent systems that have a database of some kind.
 ### Metrics
 
 Metrics are collected/pulled ("scraped" in the official lingo) by Prometheus from all components. They all expose their
-metrics in Prometheus / Open Metrics format on the `/metrics` path. You can also fetch them yourself with `curl` or in
-your browser.
+metrics in Prometheus format (a.k.a. Open Metrics) on the `/metrics` path. You can also fetch them yourself with `curl`
+or in your browser.
 
 - http://localhost:9090/metrics (Prometheus)
 - http://localhost:9100/metrics (Node-exporter)
@@ -190,7 +190,7 @@ scrape them like any other target, by going out and making an HTTP request.
 
 ### Logging
 
-We use daemontools' `multilog` to capture standard output from 3 of the 5 components. For the sake of variety, we
+We use daemontools' `multilog` to capture standard output from 3 of the 5 components. For the sake of variety, we've
 configured Grafana to manage its own log files instead of using multilog.
 
 Most of the components are configured to log in _logfmt_, a simple key=value format. The only exception is Loki. We've
@@ -206,7 +206,7 @@ displayed in the terminal window where `svscan` runs.
 <p align="center"><img src="./docs/images/logging-arch.png"/><p>
 
 The diagram shows Vector collecting its own logs. Unlike the case with Prometheus and its own metrics, Vector can
-ingest its own logs using the its [`internal_logs` source][internal_logs], so there is no need to push its logs to a
+ingest its own logs using the [`internal_logs` source][internal_logs], so there is no need to push its logs to a
 file.
 
 ## Experimenting
@@ -219,13 +219,13 @@ file.
 - Metrics for each product usually begin with that product's name, e.g.
   - `node_filesystem_avail_bytes`
   - `loki_chunk_store_stored_chunk_bytes_total`
-	- `prometheus_tsdb_head_chunks`
-	- `vector_buffer_byte_size`
+  - `prometheus_tsdb_head_chunks`
+  - `vector_buffer_byte_size`
 	
 Node-exporter also has a UI at http://localhost:9100, but it isn't terribly useful.
 
 Note that Vector doesn't export its metrics by default. We declared a `prometheus_exporter` [sink][v-prom-exporter] in
-our config. We also specified the port explicitly, even though it is the [default][v-prom-exporter].
+our config.
 
 [v-prom-exporter]: https://vector.dev/docs/reference/configuration/sinks/prometheus_exporter
 
@@ -274,12 +274,12 @@ Here are some queries to try:
 {service_name="node-exporter"} | json | log_err =~ ".+"
 ```
 
-Loki's query language is an usual hybrid that consists of three types of expressions. The first is a PromQL-like label
+Loki's query language is an unusual hybrid that consists of three types of expressions. The first is a PromQL-like label
 selector. In our setup we are only setting two labels: `service_name` and `source_type` (set in Vector). The number of
 such labels in Loki is meant to be small.
 
-You can optionally pipe the result to a string matching expression on the log line, e.g. `|= "hello"` means search for a
-log line that contain the string "hello".
+You can optionally pipe the result to a string matching expression on the log line, e.g. `|= "hello"` means: search for
+log lines that contain the string "hello".
 
 You can also match on a set of pre-populated, non-label fields. Currently the only one is `detected_level`. However, if
 the log line is in a structured format then you can also parse it by piping to the `json` built-in function. Unlike
@@ -288,8 +288,8 @@ while full log parsing (if desired) is done at query time. Once parsed, you can 
 Note that nested fields are flattened with an underscore separator `_`, so the error message in a log string like
 `{"log":{"error":"..."}}`, after parsing, is available in a field named `log_error`.
 
-Backticks `` ` `` are just an alternative syntax to double quotes `"`. They are there for when you want to include
-double quotes in your strings without the need to escape.
+Backticks `` ` `` are an alternative quoting mechanism for so-called _raw strings_. They don't support escape sequences
+(e.g. `\n`).
 
 ### Experiment with Vector
 
@@ -303,7 +303,7 @@ VRL has an interactive REPL that you can play with:
 vector vrl
 ```
 
-One of the things we do in Vector is to parse log messages first as JSON and then, if unsuccessful, as logfmt. For the
+One of the things we do in Vector is parsing log messages, first as JSON, and then, if unsuccessful, as logfmt. For the
 sake of variety, we do this in two different ways. One is via an `if`/`else` statement and handling errors explicitly
 using the so-called _fallible_ versions of functions (i.e. without a `!` suffix):[^4]
 
