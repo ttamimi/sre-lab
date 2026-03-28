@@ -24,19 +24,16 @@ brew install daemontools
 
 You also need to install all of the lab components. While some of them are available on Homebrew, we generally prefer to
 install this part of the lab directly. There are some shell scripts in the [`./install-scripts`](./install-scripts)
-directory to download and install each component.[^1]
-
-[^1]: If you decide to run this lab on Linux then be aware that some minor tweaks may be needed to the install scripts
-to account for the slight differences between the BSD-derived CLI tools on macOS and their GNU equivalents on Linux.
-For example, the `tar` command handles a leading `./` in the contents of a tar archive differently.
+directory to download and install each component.
 
 Prometheus, node-exporter, Loki, and Vector are single binaries. As long as they are in your `$PATH`, the lab will work.
 The installation scripts copy the binaries to `$HOME/bin`, so make sure that directory is in your `$PATH`. Grafana is a
 bit more elaborate. The lab expects it to be found in `$HOME/opt/grafana`.
 
 If you decide to download release assets from GitHub by clicking in your browser (e.g. for [prometheus][prom-releases])
-and then uncompressing `zip`/`tag.gz` files manually in macOS Finder, then be aware that a security mechanism in macOS
-might prevent you from running extracted executables. You will get an error like this:
+and then uncompressing `zip`/`tag.gz` files manually in macOS Finder, then be aware that the default (and very sinsible)
+macOS security setting only allows signed binaries to be executed (i.e. App Store and known developers). You will get an
+error like this:
 
 [prom-releases]: https://github.com/prometheus/prometheus/releases
 
@@ -61,7 +58,10 @@ xattr -d com.apple.quarantine <file>
 ```
 
 > [!CAUTION]
-> Make sure you trust the source of whatever files you download. Apple's malware warning is there for a reason.
+> Apple's warning mechanism is just that, a warning. The binaries are only checked for a signature. No actual malware
+> scanning is done. Any binaries downloaded through the terminal (e.g. via `curl` or `wget`) or built from sources
+> will bypass the warning. And as shown above, it is easy to circumvent it with a simple `xattr` command. Therefore,
+> make sure you trust the source of whatever files you download. The warning is there for a reason.
 
 ## Prerequisites
 
@@ -83,9 +83,9 @@ svscan services
 
 Unlike other lab environments (e.g. the [OpenTelemetry demo](https://opentelemetry.io/ecosystem/demo/)), we do not use
 Docker containers, Docker Compose, or Kubernetes tools like Kind or Minikube. While containers make things more
-portable, they also add complexity. The purpose of this lab is learning. Therefore, one of its objectives is to strip
-away unnecessary complexity, reduce cognitive load, and focus on the technologies at hand. Hence the choice of
-daemontools over containers (and over more complex process supervisors like s6 or macOS launchd).
+portable and more secure, they also add complexity. The purpose of this lab is learning. Therefore, one of its
+objectives is to strip away unnecessary complexity, reduce cognitive load, and focus on the technologies at hand. Hence
+the choice of daemontools over containers (and over more complex process supervisors like s6 or macOS launchd).
 
 At the moment, all components listen on a TCP port, and all bind to address `0.0.0.0` (i.e. they listen on all network
 interfaces). This is perfectly okay for our purposes and keeps with our philosophy of simplicity.[^2]

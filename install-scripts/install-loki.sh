@@ -12,6 +12,6 @@ then
 	echo "Already installed"
 else
 	mkdir -p $HOME/tmp
-	(cd $HOME/tmp && wget $URL && unzip $NAME.zip && rm $NAME.zip)
+	(cd $HOME/tmp && curl -LO $URL && unzip $NAME.zip && rm $NAME.zip)
 	mv $HOME/tmp/$NAME $HOME/bin/loki
 fi
