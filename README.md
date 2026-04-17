@@ -213,21 +213,70 @@ file.
 
 ### Inspect some metrics in Prometheus
 
-- Open up the Prometheus UI at http://localhost:9090
-- Try the [`up` metric](http://localhost:9090/query?g0.expr=up&g0.show_tree=0&g0.tab=table&g0.range_input=1h&g0.res_type=auto&g0.res_density=medium&g0.display_mode=lines&g0.show_exemplars=0)
-- Browse the targets http://localhost:9090/targets
-- Metrics for each product usually begin with that product's name, e.g.
-  - `node_filesystem_avail_bytes`
-  - `loki_chunk_store_stored_chunk_bytes_total`
-  - `prometheus_tsdb_head_chunks`
-  - `vector_buffer_byte_size`
-	
-Node-exporter also has a UI at http://localhost:9100, but it isn't terribly useful.
+Open up the Prometheus UI at http://localhost:9090. Here are some queries to try.
 
-Note that Vector doesn't export its metrics by default. We declared a `prometheus_exporter` [sink][v-prom-exporter] in
-our config.
+The most basic metric is the `up` metric. The results should match what's in the targets section
+http://localhost:9090/targets
+
+```
+up
+```
+
+Percent of available space on your hard disk. This should match the output of `df -h`.
+
+```
+node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes
+```
+
+Total CPU seconds per second. If you switch to graph view and the select stacked view, the total should equal the number
+CPU cores in your machine.
+
+```
+sum by(mode)(rate(node_cpu_seconds_total[5m]))
+```
+
+> [!NOTE]
+> This query illustrates three key rules in writing PromQL:
+>
+> 1. Counter metrics are meaningless on their own. You need to take a `rate` or similar function.
+>
+> 2. Always take a sum of rates, **never** a rate of sums, i.e.
+> 
+>    `rate(sum(...))` ❌
+>
+>    `sum(rate(...))` ✅
+>
+> 3. `rate` produces a rate per second. The `[5m]` interval is used to calculate the average, but the result is always
+>    per second.
+
+Your laptop's battery health status (if you are using a laptop).
+
+```
+node_power_supply_battery_health == 1
+```
+
+Number of time-series in the head block. This should match the value in the TSDB status section http://localhost:9090/tsdb-status.
+
+```
+prometheus_tsdb_head_series
+```
+
+Number of sample points collected per second.
+
+```
+sum(rate(prometheus_tsdb_head_samples_appended_total[1m]))
+```
+
+Vector's disk buffers. Note that Vector doesn't export its metrics by default. We declared a `prometheus_exporter`
+[sink][v-prom-exporter] in our config.
+
+```
+vector_buffer_byte_size{buffer_type="disk"}
+```
 
 [v-prom-exporter]: https://vector.dev/docs/reference/configuration/sinks/prometheus_exporter
+
+Node-exporter also has a UI at http://localhost:9100, but it isn't terribly useful.
 
 ### Log into Grafana and add a data source for Loki
 
