@@ -274,6 +274,14 @@ Vector's disk buffers. Note that Vector doesn't export its metrics by default. W
 vector_buffer_byte_size{buffer_type="disk"}
 ```
 
+Vector component outputs (non-metrics components).
+
+```
+sum by(component_id, component_kind, component_type)(
+  rate(vector_component_sent_events_total{component_type!="internal_metrics", component_type!="prometheus_exporter"}[1m])
+)
+```
+
 [v-prom-exporter]: https://vector.dev/docs/reference/configuration/sinks/prometheus_exporter
 
 Node-exporter also has a UI at http://localhost:9100, but it isn't terribly useful.
